@@ -1,0 +1,75 @@
+name: CI - Seguridad
+
+on:
+  push:
+    branches:
+      - main
+      - feature/vulnerabilidades
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  pytest:
+    name: Pruebas Pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Ejecutar pruebas
+        run: pytest
+
+
+  bandit:
+    name: Analisis SAST - Bandit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Bandit
+        run: pip install bandit
+
+      - name: Ejecutar Bandit
+        run: bandit -r app.py -ll
+
+
+  trivy:
+    name: Analisis de imagen - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir imagen
+        run: docker build -t proyecto-seguridad:scan .
+
+      - name: Ejecutar Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: proyecto-seguridad:scan
+          format: table
+          exit-code: "1"
+          ignore-unfixed: false
+          vuln-type: "os,library"
+          severity: "HIGH,CRITICAL"
